@@ -1,6 +1,6 @@
 # Ìrántí cryptography
 
-**Status:** design for external review · v0.1 · Phase 0 · 16 October 2026
+**Status:** design for external review · v0.2 · Phase 1 · 16 October 2026
 **Source of truth:** BUILD.md §8, refined here. Where this document differs from BUILD.md, the
 difference is listed in §12 and in `PROGRESS.md` for approval.
 **Code:** all of it lives in `packages/crypto`. Nothing else in the repo may import a
@@ -49,7 +49,8 @@ All via `libsodium-wrappers-sumo` 0.8.4 unless stated. No hand-rolled primitives
 | Symmetric encryption and key wrapping     | XChaCha20-Poly1305-IETF (`crypto_aead_xchacha20poly1305_ietf_*`)                        | 256-bit key, 192-bit random nonce, 128-bit tag |
 | Public-key encryption to a person         | Sealed box (`crypto_box_seal`): X25519 + XSalsa20-Poly1305                              | Ephemeral sender key per message               |
 | Passphrase → key                          | Argon2id (`crypto_pwhash`, `ALG_ARGON2ID13`)                                            | §3.2.2; parameters stored per envelope         |
-| Key derivation from high-entropy input    | HKDF-SHA-256 (`crypto_kdf_hkdf_sha256_*`, or WebCrypto HKDF)                            | Domain-separated `info` strings, §3.2          |
+| Key derivation from high-entropy input    | HKDF-SHA-256 via WebCrypto (libsodium-wrappers does not expose HKDF)                    | Domain-separated `info` strings, §3.2          |
+| Proof of unlock                           | Ed25519 (`crypto_sign_seed_keypair`, `crypto_sign_detached`)                            | §3.4                                           |
 | Fingerprints and commitments              | BLAKE2b-256 (`crypto_generichash`), keyed with a domain label                           | §5.4                                           |
 | Audit hash chain                          | SHA-256 (`crypto_hash_sha256`)                                                          | §8                                             |
 | Secret sharing                            | Shamir over GF(2⁸): `shamir-secret-sharing` 0.0.4 (Privy; audited by Cure53 and Zellic) | §5                                             |
@@ -121,11 +122,18 @@ accountKeyVersion])`, plus non-secret `params`.
 
 #### 3.2.1 Passkey (preferred where supported)
 
-1. At registration the client asks for the WebAuthn `prf` extension and generates a random
-   32-byte `prfSalt`, stored in `params` with the credential id.
-2. On unlock: `navigator.credentials.get({ extensions: { prf: { eval: { first: prfSalt } } } })`
-   returns a 32-byte PRF output computed inside the authenticator.
-3. `KEK = HKDF-SHA-256(ikm = prfOutput, salt = prfSalt, info = "iranti/v1/kek/passkey" ‖ userId)`.
+1. The PRF input is a constant: `prfSalt = BLAKE2b-256("iranti/v1/webauthn-prf-salt")`. A
+   constant is safe because the authenticator mixes it with a per-credential secret (the
+   CTAP2 `hmac-secret`), and it lets one ceremony both sign in (Better Auth verifies the
+   assertion) and unlock, before the server has said which envelope applies. The envelope's
+   `params` record the credential id.
+2. At registration and on every passkey sign-in or unlock, the client asks for
+   `extensions: { prf: { eval: { first: prfSalt } } }`. If an authenticator only evaluates
+   PRF on assertion, the client runs one extra local `navigator.credentials.get`.
+3. `KEK = HKDF-SHA-256(ikm = prfOutput, salt = prfSalt, info = "iranti/v1/kek/passkey" ‖ 0x00 ‖ userId)`.
+4. The PRF output never leaves the device: Better Auth's client strips
+   `clientExtensionResults` before posting the assertion, and the app reads them locally.
+   Verified end to end with a virtual CTAP 2.1 authenticator (`apps/web/e2e/passkey.spec.ts`).
 
 Support is uneven across platforms and password managers (verify the current matrix in
 Phase 1). Where PRF is missing the passkey still signs in, and unlocking falls back to the
@@ -162,6 +170,29 @@ in Phase 7.
 
 **Loss:** if every envelope is lost, the vault is unrecoverable by design. There is no
 COTEK-held envelope.
+
+**Revocation rules (server-enforced):** an envelope can be revoked only with proof of unlock
+(§3.4); at least two envelopes must remain, and the last recovery-code envelope cannot be
+revoked until a new one exists. Revocation is soft (`revokedAt`) and emails the owner.
+
+### 3.4 Proof of unlock (added in Phase 1)
+
+Signing in yields a session; it must not be enough to overwrite or delete a vault, or an
+attacker who takes over someone's email could destroy what they cannot read. So every
+request that changes vault data is signed by a key only an unlocked device has:
+
+- `seed = HKDF-SHA-256(ikm = AK, salt = userId, info = "iranti/v1/unlock-proof" ‖ 0x00 ‖ accountKeyVersion)`;
+  `(pk, sk) = Ed25519.seedKeypair(seed)`. The server stores `pk` (`User.unlockPublicKey`) at
+  setup. `pk` reveals nothing about the AK (HKDF is one-way; Ed25519 public keys hide the seed).
+- Header `X-Iranti-Proof: <unix ms>.<base64 sig>`, where
+  `sig = Ed25519.sign(sk, "iranti:proof:v1" ‖ userId ‖ METHOD ‖ path ‖ timestamp ‖ hex(SHA-256(body)))`
+  (newline-joined). The server rejects a missing or bad signature, or a timestamp more than
+  2 minutes from its clock, with 403 `unlock_required`.
+- Required on: item create/update/delete, file create/complete/delete, envelope add/revoke,
+  account deletion. Reads need only the session (they return ciphertext).
+- Residual: a captured proof could be replayed for the same method, path and body within the
+  2-minute window; that needs a TLS break, and replaying an identical write is idempotent or
+  fails the revision check.
 
 ### 3.3 Why an Account Key sits above the VMK (change from BUILD.md §8.2)
 
@@ -210,6 +241,8 @@ base64 aXJhbnRpOmFkOnYxAAxpdGVtLnBheWxvYWQBAAAAAnYxAQAAAAJpMQIAAAAIAAAAAAAAAAc=
 | `item.payload`     | Vault item payload under its IDK        | vaultId, itemId, revision                        |
 | `item.idk`         | IDK wrapped under UK or VMK             | vaultId, itemId, vaultVersion, tier              |
 | `file.chunk`       | One chunk of an attachment              | vaultId, fileId, chunkIndex, chunkCount          |
+| `file.idk`         | A file's IDK under UK or VMK            | vaultId, fileId, vaultVersion, tier              |
+| `file.meta`        | A file's name and media type            | vaultId, fileId                                  |
 | `letter.payload`   | Letter body under its IDK               | vaultId, letterId, revision                      |
 | `letter.idk`       | Letter IDK under VMK (owner copy)       | vaultId, letterId, vaultVersion                  |
 | `vault.uk`         | UK under VMK                            | vaultId, vaultVersion                            |
@@ -225,8 +258,11 @@ truncation of file chunks (the last chunk is authenticated as last).
 ### 4.3 Payload padding
 
 Plaintext JSON is padded before encryption to the next bucket (256 B up to 4 KiB, then the
-next power of two) so ciphertext length reveals little about content. Files are chunked at a
-fixed size (proposed 1 MiB); the final chunk is padded.
+next power of two) so ciphertext length reveals little about content. Padding is ISO/IEC
+7816-4 (libsodium `pad`). Files are chunked at 1 MiB of plaintext; the final chunk is padded
+to the same bucket scheme, so the server learns the chunk count and the bucket of the last
+chunk, not the exact size. A file's name and media type are encrypted together under its IDK
+(`file.meta`), padded likewise.
 
 ### 4.4 Wrapped key encoding
 
@@ -458,13 +494,13 @@ actorId ‖ canonicalJSON(data) ‖ createdAt(ISO-8601 UTC))`, fields length-pre
 
 ## 10. Test plan (crypto)
 
-| Phase | Tests                                                                                                                                                                                                                         |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | AEAD round trip with AD; tamper tests (every bit of ciphertext and tag, nonce, truncation, wrong key, AD swap across item/vault/revision/purpose); AD vector and injectivity property; library smoke tests. **Done.**         |
-| 1     | Envelopes: each of passkey (mocked PRF), passphrase, recovery code unlocks independently; wrong secret fails; Argon2id parameter floor enforced.                                                                              |
-| 3     | Composite quorum: `S_irn` + `k_c` contact shares rebuild; any set without `S_irn` fails; `k_c − 1` contact shares fail; commitments catch a bad share; header mismatch rejected; re-share revokes. Paper share QR round trip. |
-| 4     | Letter locks; card fingerprint; tlock to a near round cannot open early (staging); hand-over re-seal.                                                                                                                         |
-| 5     | **Zero-knowledge test:** given a full DB and storage dump plus every COTEK key (including KMS decrypt), an attacker harness decrypts nothing.                                                                                 |
+| Phase | Tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | AEAD round trip with AD; tamper tests (every bit of ciphertext and tag, nonce, truncation, wrong key, AD swap across item/vault/revision/purpose); AD vector and injectivity property; library smoke tests. **Done.**                                                                                                                                                                                                                                                                                                              |
+| 1     | Envelopes: each of passkey (PRF), passphrase, recovery code unlocks independently; wrong secret fails; NFKC equivalence; Argon2id floor enforced at creation and unlock; AD binding of envelopes, vault keys, identity (VMK cannot open it), tiers (UK opens urgent only), items (move/replay rejected), files (drop/reorder/transplant rejected); padding; proof-of-unlock signatures; recovery code typo detection. API integration: a full `pg_dump` contains no vault content, passphrase, recovery code or raw key. **Done.** |
+| 3     | Composite quorum: `S_irn` + `k_c` contact shares rebuild; any set without `S_irn` fails; `k_c − 1` contact shares fail; commitments catch a bad share; header mismatch rejected; re-share revokes. Paper share QR round trip.                                                                                                                                                                                                                                                                                                      |
+| 4     | Letter locks; card fingerprint; tlock to a near round cannot open early (staging); hand-over re-seal.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 5     | **Zero-knowledge test:** given a full DB and storage dump plus every COTEK key (including KMS decrypt), an attacker harness decrypts nothing.                                                                                                                                                                                                                                                                                                                                                                                      |
 
 ---
 
@@ -490,3 +526,4 @@ actorId ‖ canonicalJSON(data) ‖ createdAt(ISO-8601 UTC))`, fields length-pre
 | AD = `vaultId \| itemId \| version`                      | Length-prefixed, purpose-separated AD with an item revision                             | Removes delimiter ambiguity and cross-purpose swaps (§4)            |
 | Paper share fingerprint only                             | Commitment for every share, plus key-check values                                       | Identify a bad share, verify the rebuilt key (§5.4)                 |
 | Contact public key taken from the server                 | Invite-secret MAC and pinned key                                                        | Key-substitution attack (§6.1)                                      |
+| Session authorises all API calls                         | Writes also need a proof-of-unlock signature                                            | A stolen session must not be able to destroy a vault (§3.4)         |

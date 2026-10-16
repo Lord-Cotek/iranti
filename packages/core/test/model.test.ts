@@ -39,7 +39,7 @@ describe("payload schemas", () => {
   it("accepts Yoruba names with stacked marks", () => {
     const p = PersonPayload.parse({ name: "Ọláolúwa Adébáyọ̀", roles: ["executor"] });
     expect(p.name).toBe("Ọláolúwa Adébáyọ̀");
-    expect(p.phones).toEqual([]);
+    expect(p.phones).toBeUndefined();
   });
 
   it("refuses full account numbers in last4", () => {

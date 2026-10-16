@@ -35,10 +35,10 @@ createServer((req, res) => {
     return;
   }
   // next/og images are exported without an extension; Vercel gets the same via vercel.json.
-  const isImageRoute = /\/(icon|opengraph-image)$/.test(path);
+  const isImageRoute = /\/(icon|opengraph-image)(\/[^/.]+)?$/.test(path);
   const type = isImageRoute ? "image/png" : (types[extname(path)] ?? "application/octet-stream");
   res.writeHead(200, { "content-type": type });
   createReadStream(path).pipe(res);
-}).listen(port, "127.0.0.1", () => {
-  console.log(`Serving ${root} on http://127.0.0.1:${port}`);
+}).listen(port, () => {
+  console.log(`Serving ${root} on http://localhost:${port}`);
 });

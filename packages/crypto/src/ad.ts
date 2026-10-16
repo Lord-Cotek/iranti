@@ -17,6 +17,8 @@ export const AD_PURPOSES = [
   "item.payload", // vault item payload under its IDK
   "item.idk", // IDK wrapped under the UK (urgent) or VMK (full)
   "file.chunk", // one chunk of an encrypted attachment
+  "file.idk", // a file's IDK wrapped under the UK (urgent) or VMK (full)
+  "file.meta", // a file's name and media type
   "letter.payload", // letter body under its IDK
   "letter.idk", // letter IDK wrapped under the VMK for the owner
   "vault.uk", // Urgent Key wrapped under the VMK

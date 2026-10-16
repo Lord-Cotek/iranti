@@ -9,7 +9,8 @@
 //   publicKey          base64 X25519 public key
 //   sealed*            base64 libsodium sealed box
 //
-// Better Auth adds its own session/account/verification tables in Phase 1.
+// Better Auth owns User's name/email/emailVerified/image and the Session, Account,
+// Verification, Passkey and RateLimit tables (shapes from better-auth 1.7 core schema).
 
 generator client {
   provider = "prisma-client"
@@ -78,24 +79,110 @@ enum ShareScheme {
 }
 
 model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
+  id                String    @id @default(cuid())
+  name              String    @default("")
+  email             String    @unique
+  emailVerified     Boolean   @default(false)
+  image             String?
+  /// Owner confirmed they are 18 or over (BUILD.md §2.10) at first setup.
+  adultConfirmedAt  DateTime?
   phoneE164         String?
   country           String?
-  timezone          String   @default("Asia/Dubai")
+  timezone          String    @default("Asia/Dubai")
   /// Identity keypair (CRYPTO.md §3): receives key shares and letters for this person.
   /// Its private key is wrapped by the Account Key, never by any vault key, so releasing
   /// this person's own vault can never expose the shares they hold for others.
   publicKey         String?
   wrappedPrivKey    String?
+  /// Ed25519 public key derived from the Account Key (CRYPTO.md §3.4). Every vault change
+  /// must be signed with its private half, so a stolen session alone cannot alter a vault.
+  unlockPublicKey   String?
   /// Account Key version; bumps when the Account Key is rotated.
-  accountKeyVersion Int      @default(1)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  accountKeyVersion Int       @default(1)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   envelopes    AccountEnvelope[]
   vault        Vault?
   contactRoles TrustedContact[]  @relation("ContactUser")
+  sessions     Session[]
+  accounts     Account[]
+  passkeys     Passkey[]
+}
+
+// ── Better Auth ─────────────────────────────────────────────────────────────
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Better Auth's credential/provider link. Email OTP sign-in creates no password row.
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+/// One-time codes (stored hashed) and WebAuthn challenges.
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+/// WebAuthn credentials. The PRF secret never leaves the authenticator; only the public
+/// key and counters are stored.
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime? @default(now())
+  aaguid       String?
+
+  @@index([userId])
+  @@index([credentialID])
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
 }
 
 /// Envelopes wrap the user's Account Key (CRYPTO.md §3.2). The Account Key wraps the VMK
@@ -115,10 +202,10 @@ model AccountEnvelope {
 }
 
 model Vault {
-  id                        String   @id @default(cuid())
-  ownerId                   String   @unique
+  id                        String    @id @default(cuid())
+  ownerId                   String    @unique
   /// Bumps on VMK rotation; bound into every wrap's AD.
-  version                   Int      @default(1)
+  version                   Int       @default(1)
   /// VMK wrapped by the owner's Account Key.
   wrappedVmk                String
   /// UK wrapped by the VMK.
@@ -132,23 +219,23 @@ model Vault {
   wrappedVaultPrivKey       String
   /// Contact-layer threshold k_c (CRYPTO.md §5.2). Opening needs Ìrántí's piece plus
   /// k_c contact shares; default 1, i.e. "Ìrántí + one executor".
-  contactThreshold          Int      @default(1)
+  contactThreshold          Int       @default(1)
   /// Advanced continuity option: contacts alone (k-of-contacts) can open. Off by default.
   contactsOnlyThreshold     Int?
-  urgentWaitHours           Int      @default(48) // 24 – 168
-  urgentConfirmations       Int      @default(1)
-  fullWaitDays              Int      @default(14) // 3 – 30
-  fastTrackOn               Boolean  @default(true)
-  fastTrackConfirmations    Int      @default(2)
-  fastTrackMinHours         Int      @default(72)
-  fastTrackNeedsCertificate Boolean  @default(true)
+  urgentWaitHours           Int       @default(48) // 24 – 168
+  urgentConfirmations       Int       @default(1)
+  fullWaitDays              Int       @default(14) // 3 – 30
+  fastTrackOn               Boolean   @default(true)
+  fastTrackConfirmations    Int       @default(2)
+  fastTrackMinHours         Int       @default(72)
+  fastTrackNeedsCertificate Boolean   @default(true)
   checkInDays               Int? // null = inactivity path disabled
   lastCheckInAt             DateTime?
-  retentionDays             Int      @default(730)
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  retentionDays             Int       @default(730)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  owner    User             @relation(fields: [ownerId], references: [id])
+  owner    User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   items    VaultItem[]
   files    VaultFile[]
   contacts TrustedContact[]
@@ -178,18 +265,20 @@ model VaultItem {
 }
 
 model VaultFile {
-  id         String      @id @default(cuid())
-  vaultId    String
-  itemId     String?
-  tier       ReleaseTier @default(FULL)
-  r2Key      String      @unique
-  wrappedIdk String
-  chunkSize  Int
-  chunks     Int
-  sizeBytes  Int
-  mimeEnc    String /// encrypted mime type
-  createdAt  DateTime    @default(now())
-  vault      Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  id          String      @id @default(cuid())
+  vaultId     String
+  itemId      String?
+  tier        ReleaseTier @default(FULL)
+  r2Key       String      @unique
+  wrappedIdk  String
+  chunkSize   Int
+  chunks      Int
+  sizeBytes   Int
+  metaEnc     String /// encrypted { name, type }
+  status      String      @default("pending") // pending | complete
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  vault       Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
 
   @@index([vaultId])
 }
@@ -219,22 +308,22 @@ model TrustedContact {
 }
 
 model KeyShare {
-  id               String      @id @default(cuid())
-  vaultId          String
-  vaultVersion     Int
-  secret           ReleaseTier /// which key this is a piece of: URGENT (UK) or FULL (VMK)
-  scheme           ShareScheme @default(SERVER_AND_CONTACTS)
-  kind             ShareKind
-  contactId        String? /// null for SERVER
-  shareIndex       Int
+  id              String      @id @default(cuid())
+  vaultId         String
+  vaultVersion    Int
+  secret          ReleaseTier /// which key this is a piece of: URGENT (UK) or FULL (VMK)
+  scheme          ShareScheme @default(SERVER_AND_CONTACTS)
+  kind            ShareKind
+  contactId       String? /// null for SERVER
+  shareIndex      Int
   /// DIGITAL: sealed box to the contact's public key. SERVER: KMS ciphertext. PAPER: null.
-  sealedShare      String?
+  sealedShare     String?
   /// BLAKE2b commitment to the share, to identify a bad share at reconstruction and to
   /// verify a scanned paper share (CRYPTO.md §5.4).
-  shareCommitment  String
-  createdAt        DateTime    @default(now())
-  revokedAt        DateTime?
-  vault            Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  shareCommitment String
+  createdAt       DateTime    @default(now())
+  revokedAt       DateTime?
+  vault           Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
 
   @@index([vaultId, secret, revokedAt])
   @@index([contactId])

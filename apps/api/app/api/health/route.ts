@@ -1,6 +1,6 @@
-import { json, preflight } from "@/lib/cors";
 import { db, isDbConfigured } from "@/lib/db";
 import { checkHealth } from "@/lib/health";
+import { json } from "@/lib/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,11 +17,7 @@ async function probeDb() {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   const health = await checkHealth(probeDb);
-  return json(request, health, { status: health.status === "ok" ? 200 : 503 });
-}
-
-export function OPTIONS(request: Request) {
-  return preflight(request);
+  return json(health, health.status === "ok" ? 200 : 503);
 }

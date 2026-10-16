@@ -1,6 +1,114 @@
 # Progress
 
-## Phase 0: Foundations · 16 October 2026 · awaiting review
+## Phase 1: Accounts and the locked vault · 16 October 2026 · awaiting review
+
+Phase 0 was approved by Temi ("we can move on… let's continue"). The five crypto refinements
+proposed in Phase 0 were not objected to and are built as designed; say if any should change.
+
+### Built
+
+- **Auth (Better Auth 1.7, decided over the JWT fallback):** email one-time codes (6 digits,
+  stored hashed, 10-minute expiry, 5 attempts) and passkeys. httpOnly `SameSite=Lax` session
+  cookies on the API; trusted-origin checks; rate limits in the database (codes: 5 per 10
+  minutes per IP); no passwords. Telemetry off. Sign-up allowlist for the pre-launch period
+  (`SIGNUP_ALLOWLIST`; closed in production when unset). Account deletion in-app.
+- **Vault creation, on the device:** Account Key, identity keypair, VMK, Urgent Key, vault
+  keypair, key-check values, passphrase envelope (Argon2id, target 256 MiB with a 64 MiB floor
+  fallback), recovery-code envelope, proof-of-unlock key. One atomic `POST /api/setup`.
+  Passphrase strength enforced (12+ characters and zxcvbn score ≥ 3). 18+ confirmation.
+- **Emergency Kit:** one-page PDF made on the device (pdf-lib, IBM Plex Sans embedded so Yoruba
+  marks print), never uploaded. Setup cannot continue until the person types the last two
+  groups of the code back, or ticks an explicit "I understand" to skip.
+- **Unlock:** passkey (WebAuthn PRF) → passphrase → recovery code. A passkey sign-in signs in
+  and unlocks in one ceremony. Keys live only in memory: auto-lock after 1/5/15/30 minutes
+  (default 5), optional lock when the tab is hidden, and a reload forgets everything.
+- **Proof of unlock (new, CRYPTO.md §3.4):** every write is signed with an Ed25519 key derived
+  from the Account Key. A stolen session can read ciphertext but cannot change or delete
+  anything. Promised in THREAT_MODEL.md §4.9; now enforced.
+- **Vault items:** all §5 types from one registry (`packages/core/src/vault/types.ts`): the
+  field list generates both the Zod schema and the form. Encrypted CRUD with per-revision IDKs,
+  length-bucket padding, optimistic concurrency (revision must be stored + 1), tier choice per
+  item ("Open in the first days" / "Open with everything else").
+- **Files:** encrypted on the device in 1 MiB chunks bound to their position, uploaded straight
+  to R2 with presigned URLs (aws4fetch), checked complete server-side, downloaded and decrypted
+  in the browser, image preview and PDF open. Names are encrypted too. Deleting an item
+  deletes its files.
+- **PWA:** manifest, icons generated at build, service worker precaching the app shell; the
+  vault's ciphertext and wrapped keys cached in IndexedDB so a device can unlock and read
+  offline.
+- **Strict CSP:** every exported page gets a per-page CSP with SHA-256 hashes of its inline
+  scripts (`apps/web/scripts/postbuild.mjs`); `'unsafe-inline'` is gone from `script-src`.
+  `'wasm-unsafe-eval'` is allowed for libsodium.
+- **Export:** a zip made on the device: `vault.json` (every item decrypted), `files/` (the
+  originals) and `summary.html` (readable, with a warning that it is not encrypted).
+- **Migrations:** first Prisma migration (all tables including Better Auth's). Applied
+  automatically during Vercel production builds only (`apps/api/scripts/migrate.mjs`).
+
+### Tests
+
+- `packages/crypto`: 51 (envelopes, recovery codes, vault/tier separation, items, files,
+  padding, proof of unlock, plus Phase 0's AEAD/AD suite).
+- `apps/api`: 19 including **integration tests against Postgres** through the real route
+  handlers and Better Auth: sign-in by emailed code, setup-once, independent passphrase and
+  recovery unlocks, proof-of-unlock enforcement, revision conflicts, vault isolation, passkey
+  envelope and revocation rules, encrypted file round trip through S3, account deletion, OTP
+  rate limiting, and **a full `pg_dump` that contains no vault content, passphrase, recovery
+  code or raw key**.
+- `apps/web` e2e (Playwright, full stack: static export + API + Postgres + fake S3): the whole
+  owner journey; passkey with PRF via a virtual authenticator (sign in + unlock in one step);
+  installable PWA with a controlling service worker; offline unlock and read; hash-based CSP on
+  every page and zero CSP violations during the flows; 360 px layout.
+- CI now runs the integration tests (Postgres service) and the full-stack e2e job.
+
+### Acceptance (BUILD.md §16 Phase 1)
+
+| Criterion                                              | Status                                                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| DB inspection shows no plaintext for any vault content | Automated: `pg_dump` test                                                                              |
+| Tamper tests fail decryption                           | Automated (crypto suite)                                                                               |
+| Passphrase and recovery code each unlock independently | Automated (unit, integration, e2e)                                                                     |
+| Export round-trips                                     | Automated (unit + e2e reads the zip back)                                                              |
+| Lighthouse PWA installable                             | Manifest, icons and controlling SW verified in e2e; a Lighthouse run on the live domain is still to do |
+
+### Decisions
+
+| Decision                                            | Why                                                                                                                                                                   |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Better Auth over the JWT fallback                   | Email OTP + passkey plugins fit; its client strips WebAuthn extension results before posting, so PRF output never reaches the server. Bearer plugin added in Phase 7. |
+| Constant PRF salt                                   | Lets one passkey ceremony sign in and unlock. Safe: the authenticator mixes it with a per-credential secret (CRYPTO.md §3.2.1).                                       |
+| HKDF via WebCrypto                                  | libsodium-wrappers does not expose HKDF; WebCrypto HKDF is standard and lives inside packages/crypto.                                                                 |
+| Client-generated ids                                | So associated data can bind ciphertext to its id before upload.                                                                                                       |
+| Hand-written service worker                         | Small, readable, and generated after the CSP step so precache matches the shipped HTML; Serwist/Workbox add a build plugin for little gain here.                      |
+| "Lock when I switch tabs" off by default            | Locking on every tab switch makes copying details from other tabs painful; the 5-minute idle lock stays on. Owners can turn it on.                                    |
+| Sessions record IP and user agent                   | Better Auth default; covered by "sign-in records" in the privacy policy §5.                                                                                           |
+| `pg` adapter locally/CI, Neon adapter in production | Chosen by URL in `apps/api/src/lib/db.ts`.                                                                                                                            |
+
+### Not done in this phase
+
+- Sentry: listed for Phase 1 in `.env.example`, not in the Phase 1 build list. Deferred so it
+  lands with the scrubbing allow-list designed properly.
+- Offline **writes** (Phase 2 acceptance). Phase 1 reads offline.
+- A Lighthouse run against the live domain (needs the domain and a deploy).
+- Rollback manifest (CRYPTO.md §4.5) is still a proposal.
+
+### What Temi needs to set for production
+
+- Vercel **api** project: `EMAIL_FROM` (domain verified in Resend), `SIGNUP_ALLOWLIST` (your
+  address or `@yourdomain`), R2 (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+  `R2_BUCKET`) plus the bucket CORS policy in the README.
+- Vercel **web** project: add the domain `iranti.cotek.app` (the API only accepts that origin,
+  and passkeys are bound to it).
+
+### Open questions
+
+1. Anything in the Phase 0 refinements you want changed now that they are built?
+2. `SIGNUP_ALLOWLIST`: who should be able to create accounts before launch?
+3. Default auto-lock 5 minutes, "lock on tab switch" off: right defaults?
+4. Phase 0 questions 2–7 still stand (theme, Ìtàn name, KMS provider, defaults, data region, drand).
+
+---
+
+## Phase 0: Foundations · 16 October 2026 · approved
 
 ### Built
 

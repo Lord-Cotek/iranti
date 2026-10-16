@@ -115,7 +115,18 @@ export default tseslint.config(
     },
   },
   {
-    files: ["**/*.config.{js,mjs,ts}", "scripts/**/*.mjs", "**/scripts/**/*.mjs"],
+    files: [
+      "**/*.config.{js,mjs,ts}",
+      "scripts/**/*.mjs",
+      "**/scripts/**/*.mjs",
+      "**/e2e/**/*.mjs",
+    ],
     rules: { "no-console": "off" },
+  },
+  {
+    // Build tooling, not vault cryptography: SHA-256 of shipped inline scripts for the CSP
+    // and a cache version for the service worker. Never runs in the app.
+    files: ["apps/web/scripts/postbuild.mjs"],
+    rules: { "no-restricted-imports": "off" },
   },
 );

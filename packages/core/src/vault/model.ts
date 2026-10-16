@@ -48,22 +48,20 @@ export function isTypeInSection(section: Section, type: string): type is ItemTyp
   return (SECTION_TYPES[section] as readonly string[]).includes(type);
 }
 
-/**
- * Default tier per item type (BUILD.md §5). The owner can move any item. Insurance and
- * documents default to FULL here; the UI promotes repatriation/life policies and will/POA
- * *locations* to URGENT when the owner marks them so.
- */
-const URGENT_BY_DEFAULT: ReadonlySet<string> = new Set([
-  "person",
-  "body_and_rites",
-  "funeral",
-  "organ_donation",
-  "guardianship",
-]);
-
-export function defaultTier(type: ItemType): ReleaseTier {
-  return URGENT_BY_DEFAULT.has(type) ? "URGENT" : "FULL";
-}
+export const SECTION_LABELS: Record<Section, { label: string; eyebrow: string; blurb: string }> = {
+  people: { label: "People", eyebrow: "WHO", blurb: "Who to call, and who acts for you" },
+  assets: { label: "What you own", eyebrow: "WHAT", blurb: "Accounts, property, investments" },
+  obligations: { label: "What you owe", eyebrow: "WHAT", blurb: "Loans, cards, leases, fees" },
+  insurance: { label: "Insurance", eyebrow: "WHAT", blurb: "Policies and how to claim" },
+  documents: { label: "Documents", eyebrow: "WHAT", blurb: "Will, IDs, certificates" },
+  wishes: { label: "Wishes", eyebrow: "WISHES", blurb: "Body, rites, children, belongings" },
+  digital: { label: "Digital life", eyebrow: "WISHES", blurb: "Accounts and passwords" },
+  sealed_note: {
+    label: "Sealed notes",
+    eyebrow: "WHAT",
+    blurb: "Secrets your executors will need",
+  },
+};
 
 /** The server-visible envelope of an item. Ciphertext fields are opaque base64. */
 export const VaultItemRecord = z.object({

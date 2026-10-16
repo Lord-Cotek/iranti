@@ -29,7 +29,7 @@ cp apps/api/.env.example apps/api/.env      # add Neon URLs to talk to a databas
 cp apps/web/.env.example apps/web/.env.local
 pnpm dev                                    # web :3000, api :3001
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
-pnpm --filter @iranti/web e2e               # after a build
+pnpm --filter @iranti/web e2e               # after a build (see Tests)
 ```
 
 ## Deploy (Vercel)
@@ -42,4 +42,30 @@ Two projects from this one repository:
 | `iranti-api` | `apps/api`     | `api.iranti.cotek.app` | secrets only, see `.env.example` |
 
 Each app's `vercel.json` sets the install and build commands. Domains are scoped per project
-(no wildcard).
+(no wildcard). Production API builds apply pending database migrations first
+(`apps/api/scripts/migrate.mjs`, needs `DIRECT_URL`).
+
+### R2 bucket CORS
+
+Browsers upload and download encrypted chunks straight to R2. In Cloudflare → R2 → your bucket
+→ Settings → CORS policy:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://iranti.cotek.app"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+## Tests
+
+- `pnpm test` runs unit tests everywhere. API integration tests run when `TEST_DATABASE_URL`
+  points at a Postgres database (they reset it): e.g.
+  `TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5433/iranti_test pnpm test`.
+- e2e (`pnpm --filter @iranti/web e2e`) starts the API, the static site and a fake S3 itself.
+  Build first with `NEXT_PUBLIC_API_URL=http://localhost:3001 NEXT_PUBLIC_SITE_URL=http://localhost:4173 NEXT_PUBLIC_STORAGE_ORIGIN=http://localhost:9000 pnpm build`,
+  and point `E2E_DATABASE_URL` at a migrated database.

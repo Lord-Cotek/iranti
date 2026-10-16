@@ -16,5 +16,6 @@ Read `docs/BUILD.md` before any phase; it is the plan. `docs/PROGRESS.md` says w
 - Ask before destructive actions (data-dropping migrations, deleting files, force pushes).
 
 Commands: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`,
-`pnpm --filter @iranti/web e2e`. In the cloud dev container, set
+`pnpm --filter @iranti/web e2e` (see README "Tests" for the database and build env it needs).
+API integration tests run only when `TEST_DATABASE_URL` is set. In the cloud dev container, set
 `NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt` so next/font can fetch Google Fonts.

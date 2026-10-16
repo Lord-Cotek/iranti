@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { fontVariables } from "./fonts";
 import "./globals.css";
+import { RegisterSW } from "@/components/RegisterSW";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://iranti.cotek.app";
 
@@ -35,7 +36,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // dir="ltr" today; layouts use logical properties so Arabic (Phase 9) can flip it.
     <html lang="en" dir="ltr" className={fontVariables}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <RegisterSW />
+      </body>
     </html>
   );
 }

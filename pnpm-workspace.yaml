@@ -8,3 +8,10 @@ onlyBuiltDependencies:
   - "prisma"
   - "esbuild"
   - "sharp"
+
+# drand-client imports @noble/hashes without declaring it; pin the v1 API it expects so a
+# hoisted v2 (from better-auth) is not picked up instead.
+packageExtensions:
+  drand-client@1:
+    dependencies:
+      "@noble/hashes": "^1.4.0"

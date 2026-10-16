@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ["@iranti/core"],
+  transpilePackages: ["@iranti/core", "@iranti/crypto"],
   eslint: { ignoreDuringBuilds: true },
   async headers() {
     return [

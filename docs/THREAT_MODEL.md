@@ -1,6 +1,6 @@
 # Ìrántí threat model
 
-**Status:** v0.1 · Phase 0 · 16 October 2026 · for external review with `CRYPTO.md`
+**Status:** v0.2 · Phase 1 · 16 October 2026 · for external review with `CRYPTO.md`
 **Scope:** the web/PWA client, the Capacitor apps (Phase 7), the API, the database, object
 storage, KMS, jobs and messaging, and the people in BUILD.md §3.
 
@@ -120,9 +120,12 @@ remains.
 ### 4.9 T4 takes over an account
 
 - **Mitigation:** signing in does not unlock (C§3.2). An attacker with only email/phone
-  reaches ciphertext they cannot decrypt. Passkeys preferred. Sensitive actions (adding or
-  removing contacts, changing quorum or timings, adding envelopes, export) require an unlock,
-  not just a session, and notify the owner on every channel.
+  reaches ciphertext they cannot decrypt. Passkeys preferred. **Every write** (items, files,
+  unlock methods, account deletion) requires a proof-of-unlock signature from a key derived
+  from the Account Key (C§3.4), so a stolen session can read ciphertext but cannot alter,
+  delete or lock the owner out. Adding or removing an unlock method emails the owner. One-time
+  codes are stored hashed, expire in 10 minutes, allow 5 attempts, and sending is rate-limited
+  per IP (5 per 10 minutes).
 - **Residual:** taking over a **contact's** account gives the attacker the ability to open
   or confirm claims, but not to open the contact's share (it needs the contact's AK). A
   takeover of an executor's account **and** unlock secret is equivalent to T3.
@@ -175,6 +178,14 @@ remains.
   and two-person approval; owner export at any time.
 - **Residual:** if the owner loses every envelope, the vault is unrecoverable by design.
 
+### 4.15a Pre-launch exposure
+
+- **Threat:** the product is reachable before the external cryptography review (BUILD.md
+  Phase 8).
+- **Mitigation:** in Vercel production, account creation is closed unless the address or
+  domain is on `SIGNUP_ALLOWLIST`; codes are not even sent to unknown addresses, and the
+  response does not reveal the allowlist.
+
 ### 4.16 Leakage through logs, monitoring, analytics and AI
 
 - **Mitigation:** never log secrets (ESLint rule and CI grep); Sentry with an allow-list and
@@ -185,23 +196,23 @@ remains.
 
 ## 5. Mitigation map
 
-| Threat                | §8 (crypto) / C§                | §9 (protocol)                      | Other                                 |
-| --------------------- | ------------------------------- | ---------------------------------- | ------------------------------------- |
-| 4.1 T1 reads content  | Client-side AEAD, C§3, C§4      | —                                  | Zero-knowledge test (Phase 5)         |
-| 4.2 T1 early release  | Composite quorum, C§5.2         | Notices, waits, audit chain        | Privacy policy honesty                |
-| 4.3 Key substitution  | Invite MAC, pinning, C§6.1      | —                                  | UI warning on server-delivered invite |
-| 4.4 Swap / rollback   | AD binding, C§4                 | —                                  | Manifest (proposed)                   |
-| 4.5 DB theft          | Envelopes, Argon2id, KMS, C§3.2 | —                                  | Passphrase strength, passkeys         |
-| 4.6 False claim       | —                               | 24 h floor, owner cancel, disputes | RUNBOOK_RELEASE.md                    |
-| 4.7 Contact collusion | Composite quorum, C§5.2         | —                                  | `CONTACTS_ONLY` off by default        |
-| 4.8 Malicious code    | —                               | —                                  | Native bundle, CSP, build hashes      |
-| 4.9 Account takeover  | Login ≠ unlock, C§3.2           | Unlock for sensitive changes       | Passkeys, notices                     |
-| 4.10 Coercion         | —                               | Delayed weakening of settings      | Accepted                              |
-| 4.11 Early letters    | Per-recipient seal, tlock, C§7  | Server gating                      | —                                     |
-| 4.12 Phishing         | Shares opened only in-app       | —                                  | Copy, public guide                    |
-| 4.13 Compulsion       | Zero-knowledge, C§1             | Release needs a contact share      | Transparency report                   |
-| 4.15 Availability     | `CONTACTS_ONLY`, export         | —                                  | Continuity runbook, backups           |
-| 4.16 Logs / AI        | —                               | —                                  | Lint + CI grep, Sentry allow-list     |
+| Threat                | §8 (crypto) / C§                              | §9 (protocol)                             | Other                                 |
+| --------------------- | --------------------------------------------- | ----------------------------------------- | ------------------------------------- |
+| 4.1 T1 reads content  | Client-side AEAD, C§3, C§4                    | —                                         | Zero-knowledge test (Phase 5)         |
+| 4.2 T1 early release  | Composite quorum, C§5.2                       | Notices, waits, audit chain               | Privacy policy honesty                |
+| 4.3 Key substitution  | Invite MAC, pinning, C§6.1                    | —                                         | UI warning on server-delivered invite |
+| 4.4 Swap / rollback   | AD binding, C§4                               | —                                         | Manifest (proposed)                   |
+| 4.5 DB theft          | Envelopes, Argon2id, KMS, C§3.2               | —                                         | Passphrase strength, passkeys         |
+| 4.6 False claim       | —                                             | 24 h floor, owner cancel, disputes        | RUNBOOK_RELEASE.md                    |
+| 4.7 Contact collusion | Composite quorum, C§5.2                       | —                                         | `CONTACTS_ONLY` off by default        |
+| 4.8 Malicious code    | —                                             | —                                         | Native bundle, CSP, build hashes      |
+| 4.9 Account takeover  | Login ≠ unlock; proof of unlock, C§3.2, C§3.4 | Every write signed by the unlocked device | Passkeys, notices, OTP limits         |
+| 4.10 Coercion         | —                                             | Delayed weakening of settings             | Accepted                              |
+| 4.11 Early letters    | Per-recipient seal, tlock, C§7                | Server gating                             | —                                     |
+| 4.12 Phishing         | Shares opened only in-app                     | —                                         | Copy, public guide                    |
+| 4.13 Compulsion       | Zero-knowledge, C§1                           | Release needs a contact share             | Transparency report                   |
+| 4.15 Availability     | `CONTACTS_ONLY`, export                       | —                                         | Continuity runbook, backups           |
+| 4.16 Logs / AI        | —                                             | —                                         | Lint + CI grep, Sentry allow-list     |
 
 ## 6. Out of scope
 
