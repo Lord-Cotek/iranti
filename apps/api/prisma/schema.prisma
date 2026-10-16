@@ -1,0 +1,341 @@
+// Ìrántí data model (BUILD.md §15, refined per docs/CRYPTO.md).
+//
+// Rule for every column: the server may read operational metadata (ids, timings, states,
+// contact details for notices). Anything a person wrote is ciphertext produced on a device.
+//
+// Encodings:
+//   *Enc, ciphertext   base64 XChaCha20-Poly1305 ciphertext (nonce in its own column, or
+//                      prefixed: "wrapped" fields are base64(nonce || ciphertext))
+//   publicKey          base64 X25519 public key
+//   sealed*            base64 libsodium sealed box
+//
+// Better Auth adds its own session/account/verification tables in Phase 1.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ContactStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  REMOVED
+}
+
+enum ShareKind {
+  DIGITAL // sealed to a trusted contact's X25519 public key
+  PAPER // printed; only a fingerprint is stored
+  SERVER // Ìrántí's piece, encrypted under KMS
+}
+
+enum ReleaseTier {
+  URGENT
+  FULL
+}
+
+enum LetterLock {
+  RECIPIENT_KEY
+  LETTER_CARD
+  HANDOVER
+}
+
+enum LetterGate {
+  ON_RELEASE
+  RELEASE_PLUS
+  FIXED_DATE
+  MILESTONE
+}
+
+enum ReleaseState {
+  ARMED
+  CLAIM_OPEN
+  URGENT_WAIT
+  URGENT_OPEN
+  FULL_WAIT
+  FULL_OPEN
+  CLOSED
+  CANCELLED
+  DISPUTED
+}
+
+enum EnvelopeKind {
+  PASSKEY
+  PASSPHRASE
+  RECOVERY
+  DEVICE
+}
+
+/// docs/CRYPTO.md §5.2. SERVER_AND_CONTACTS (default): Ìrántí's piece AND a contact quorum.
+/// CONTACTS_ONLY: the owner-enabled continuity option, k-of-contacts with no Ìrántí piece.
+enum ShareScheme {
+  SERVER_AND_CONTACTS
+  CONTACTS_ONLY
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  phoneE164         String?
+  country           String?
+  timezone          String   @default("Asia/Dubai")
+  /// Identity keypair (CRYPTO.md §3): receives key shares and letters for this person.
+  /// Its private key is wrapped by the Account Key, never by any vault key, so releasing
+  /// this person's own vault can never expose the shares they hold for others.
+  publicKey         String?
+  wrappedPrivKey    String?
+  /// Account Key version; bumps when the Account Key is rotated.
+  accountKeyVersion Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  envelopes    AccountEnvelope[]
+  vault        Vault?
+  contactRoles TrustedContact[]  @relation("ContactUser")
+}
+
+/// Envelopes wrap the user's Account Key (CRYPTO.md §3.2). The Account Key wraps the VMK
+/// (for owners) and the identity private key (for everyone). Replaces §15 VaultEnvelope.
+model AccountEnvelope {
+  id         String       @id @default(cuid())
+  userId     String
+  kind       EnvelopeKind
+  wrappedKey String /// base64(nonce || AEAD(KEK, AccountKey, AD))
+  params     Json /// KDF params, PRF salt, credential id. Never secrets.
+  label      String? /// "iPhone 15", "Passphrase"
+  createdAt  DateTime     @default(now())
+  revokedAt  DateTime?
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Vault {
+  id                        String   @id @default(cuid())
+  ownerId                   String   @unique
+  /// Bumps on VMK rotation; bound into every wrap's AD.
+  version                   Int      @default(1)
+  /// VMK wrapped by the owner's Account Key.
+  wrappedVmk                String
+  /// UK wrapped by the VMK.
+  wrappedUrgentKey          String
+  /// Key-check values: AEAD of a fixed label, so a rebuilt key can be verified (CRYPTO.md §5.4).
+  kcvVmk                    String
+  kcvUrgentKey              String
+  /// Vault keypair (BUILD.md §8.1 "owner keypair"): private key wrapped by the VMK, so
+  /// executors can read what was sealed to the vault after release.
+  vaultPublicKey            String
+  wrappedVaultPrivKey       String
+  /// Contact-layer threshold k_c (CRYPTO.md §5.2). Opening needs Ìrántí's piece plus
+  /// k_c contact shares; default 1, i.e. "Ìrántí + one executor".
+  contactThreshold          Int      @default(1)
+  /// Advanced continuity option: contacts alone (k-of-contacts) can open. Off by default.
+  contactsOnlyThreshold     Int?
+  urgentWaitHours           Int      @default(48) // 24 – 168
+  urgentConfirmations       Int      @default(1)
+  fullWaitDays              Int      @default(14) // 3 – 30
+  fastTrackOn               Boolean  @default(true)
+  fastTrackConfirmations    Int      @default(2)
+  fastTrackMinHours         Int      @default(72)
+  fastTrackNeedsCertificate Boolean  @default(true)
+  checkInDays               Int? // null = inactivity path disabled
+  lastCheckInAt             DateTime?
+  retentionDays             Int      @default(730)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  owner    User             @relation(fields: [ownerId], references: [id])
+  items    VaultItem[]
+  files    VaultFile[]
+  contacts TrustedContact[]
+  shares   KeyShare[]
+  letters  Letter[]
+  releases ReleaseCase[]
+  checkIns CheckIn[]
+}
+
+model VaultItem {
+  id         String      @id @default(cuid())
+  vaultId    String
+  section    String // people | assets | obligations | insurance | documents | wishes | digital | sealed_note
+  type       String // bank_account | will | body_and_rites | ...
+  tier       ReleaseTier @default(FULL)
+  /// Increments on every edit; bound into the payload AD (CRYPTO.md §4).
+  revision   Int         @default(1)
+  wrappedIdk String /// IDK wrapped by the UK (URGENT) or VMK (FULL)
+  ciphertext String /// XChaCha20-Poly1305(padded payload JSON)
+  nonce      String
+  schemaVer  Int         @default(1)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  vault      Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId, section])
+}
+
+model VaultFile {
+  id         String      @id @default(cuid())
+  vaultId    String
+  itemId     String?
+  tier       ReleaseTier @default(FULL)
+  r2Key      String      @unique
+  wrappedIdk String
+  chunkSize  Int
+  chunks     Int
+  sizeBytes  Int
+  mimeEnc    String /// encrypted mime type
+  createdAt  DateTime    @default(now())
+  vault      Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId])
+}
+
+model TrustedContact {
+  id                 String        @id @default(cuid())
+  vaultId            String
+  userId             String? /// set on acceptance
+  inviteEmail        String
+  invitePhone        String?
+  displayNameEnc     String /// encrypted with the VMK (owner-only label)
+  /// The contact's public key as the owner verified it, AEAD-encrypted under the VMK with
+  /// the contact id in the AD, so the server cannot silently swap it (CRYPTO.md §6.1).
+  pinnedPublicKeyEnc String?
+  /// How the pin was verified: invite_mac | fingerprint_compare. Null = unverified.
+  keyVerification    String?
+  isExecutor         Boolean       @default(false)
+  canConfirm         Boolean       @default(true)
+  status             ContactStatus @default(INVITED)
+  invitedAt          DateTime      @default(now())
+  acceptedAt         DateTime?
+  vault              Vault         @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  user               User?         @relation("ContactUser", fields: [userId], references: [id])
+
+  @@index([vaultId])
+  @@index([userId])
+}
+
+model KeyShare {
+  id               String      @id @default(cuid())
+  vaultId          String
+  vaultVersion     Int
+  secret           ReleaseTier /// which key this is a piece of: URGENT (UK) or FULL (VMK)
+  scheme           ShareScheme @default(SERVER_AND_CONTACTS)
+  kind             ShareKind
+  contactId        String? /// null for SERVER
+  shareIndex       Int
+  /// DIGITAL: sealed box to the contact's public key. SERVER: KMS ciphertext. PAPER: null.
+  sealedShare      String?
+  /// BLAKE2b commitment to the share, to identify a bad share at reconstruction and to
+  /// verify a scanned paper share (CRYPTO.md §5.4).
+  shareCommitment  String
+  createdAt        DateTime    @default(now())
+  revokedAt        DateTime?
+  vault            Vault       @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId, secret, revokedAt])
+  @@index([contactId])
+}
+
+model Letter {
+  id            String            @id @default(cuid())
+  vaultId       String
+  gate          LetterGate
+  fireAt        DateTime? // FIXED_DATE
+  offsetDays    Int? // RELEASE_PLUS
+  milestoneEnc  String? /// encrypted milestone description
+  revision      Int               @default(1)
+  wrappedIdkVmk String /// owner access
+  ciphertext    String /// or pointer to VaultFile for audio/video
+  nonce         String
+  fileId        String?
+  status        String            @default("draft") // draft | armed | available | delivered | cancelled
+  recipients    LetterRecipient[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  vault         Vault             @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId])
+  @@index([status, fireAt])
+}
+
+model LetterRecipient {
+  id              String     @id @default(cuid())
+  letterId        String
+  lock            LetterLock
+  recipientUserId String? /// RECIPIENT_KEY: their recipient account
+  cardFingerprint String? /// LETTER_CARD: hash of the card's public key, to verify a scanned card
+  wrappedIdk      String? /// IDK sealed to the recipient key or card public key (null for HANDOVER until re-locked)
+  tlockRound      Int? /// drand round for date-gated letters; the wrapped key is timelocked to it
+  noticeContact   String? /// email or phone for the "a letter is waiting" notice; the only letter field Ìrántí can read
+  questionEnc     String? /// optional personal question, sealed with the letter
+  availableAt     DateTime?
+  openedAt        DateTime?
+  letter          Letter     @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@index([letterId])
+  @@index([recipientUserId])
+}
+
+model ReleaseCase {
+  id                  String         @id @default(cuid())
+  vaultId             String
+  state               ReleaseState   @default(CLAIM_OPEN)
+  path                String // death_claim | inactivity
+  openedById          String?
+  evidenceSealed      Json? /// evidence sealed to each trusted contact's public key; unreadable by Ìrántí
+  urgentEligibleAt    DateTime?
+  fullEligibleAt      DateTime?
+  fastTrackEligibleAt DateTime?
+  urgentOpenedAt      DateTime?
+  fullOpenedAt        DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  events              ReleaseEvent[]
+  vault               Vault          @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId, state])
+}
+
+/// Append-only, hash-chained (BUILD.md §9). The unique prevHash per case stops a fork.
+model ReleaseEvent {
+  id        String      @id @default(cuid())
+  caseId    String
+  seq       Int
+  type      String // opened | evidence_added | owner_notified | contacts_notified | owner_cancelled | confirmed | disputed | urgent_opened | full_opened | piece_issued | closed
+  actorId   String?
+  data      Json? /// never secrets
+  prevHash  String?
+  hash      String /// sha256 over the canonical encoding in CRYPTO.md §8
+  createdAt DateTime    @default(now())
+  case      ReleaseCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, seq])
+  @@unique([caseId, prevHash])
+}
+
+/// "Funmi can no longer act as one of your trusted people"
+model ContactNotice {
+  id             String    @id @default(cuid())
+  vaultId        String /// the owner who relied on this contact
+  contactId      String
+  reason         String /// internal only: contact_released | contact_deleted | contact_declined — never shown
+  sentAt         DateTime  @default(now())
+  acknowledgedAt DateTime?
+
+  @@index([vaultId])
+}
+
+model CheckIn {
+  id         String    @id @default(cuid())
+  vaultId    String
+  sentAt     DateTime
+  channel    String
+  answeredAt DateTime?
+  vault      Vault     @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  @@index([vaultId, sentAt])
+}

@@ -1,0 +1,48 @@
+/*
+ * Ìrántí tokens, "dusk and candle" (BUILD.md §12). Dark is the default theme; light is
+ * opt-in with data-theme="light" on <html>. Keep in sync with tokens.ts (a test checks).
+ *
+ * Font variables (--font-display, --font-ui, --font-mono, --font-read) are set by next/font
+ * in apps/web; the fallbacks here keep components readable anywhere else.
+ */
+:root {
+  --bg: #0e0f14;
+  --surface: #16181f;
+  --raise: #1c1f28;
+  --ink: #ece7dd;
+  --muted: #8c8a85;
+  --border: #262833;
+  --accent: #e2b65a;
+  --accent-soft: rgb(226 182 90 / 0.12);
+  --accent-ink: #2a1e05;
+  --accent2: #7e9c8a;
+  --accent2-soft: rgb(126 156 138 / 0.14);
+  --alert: #d9735b;
+  --alert-soft: rgb(217 115 91 / 0.12);
+  --paper: #f3eee3;
+  --paper-ink: #2a2620;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 16px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f1ea;
+  --surface: #ffffff;
+  --raise: #faf7f1;
+  --ink: #23211d;
+  --muted: #6e6a63;
+  --border: #e2dbcf;
+  --accent: #b8862e;
+  --accent-soft: rgb(184 134 46 / 0.12);
+  --accent-ink: #ffffff;
+  --accent2: #5f7e6c;
+  --accent2-soft: rgb(95 126 108 / 0.14);
+  --alert: #b85a44;
+  --alert-soft: rgb(184 90 68 / 0.12);
+
+  color-scheme: light;
+}

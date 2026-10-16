@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+node_modules
+.next
+out
+.turbo
+coverage
+apps/api/src/generated
+docs/design/*.html
+docs/BUILD.md
+docs/PRIVACY_POLICY.md

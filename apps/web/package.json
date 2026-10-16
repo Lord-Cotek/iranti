@@ -1,0 +1,34 @@
+{
+  "name": "@iranti/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static client (output: 'export'): the hosted PWA and the Capacitor bundle.",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "node scripts/serve-static.mjs out 4173",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@iranti/core": "workspace:*",
+    "@iranti/crypto": "workspace:*",
+    "@iranti/ui": "workspace:*",
+    "next": "15.5.28",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^22.18.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

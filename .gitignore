@@ -1,0 +1,25 @@
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma generated client
+apps/api/src/generated/
+
+# Env: only *.example and non-secret *.production files are committed
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+
+.vercel
+.DS_Store
+*.log
