@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ìrántí — concept screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,500&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #08090D;
+    --page-ink: #E4DFD5;
+    --page-muted: #85827C;
+
+    --bg: #0E0F14;
+    --surface: #16181F;
+    --raise: #1C1F28;
+    --ink: #ECE7DD;
+    --muted: #8C8A85;
+    --border: #262833;
+    --candle: #E2B65A;
+    --candle-soft: rgba(226,182,90,.12);
+    --sage: #7E9C8A;
+    --sage-soft: rgba(126,156,138,.14);
+    --alert: #D9735B;
+    --alert-soft: rgba(217,115,91,.12);
+
+    --serif: "Playfair Display", Georgia, serif;
+    --read: "Literata", Georgia, serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(226,182,90,.06), transparent 70%),
+      var(--page);
+    color: var(--page-ink); font-family: var(--sans); font-size: 15px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--candle); outline-offset: 2px; border-radius: 6px; }
+
+  .shell { max-width: 1320px; margin: 0 auto; padding: 28px 16px 64px; }
+  .top { padding-bottom: 22px; border-bottom: 1px solid #16171D; display: flex; flex-wrap: wrap; gap: 14px 40px; align-items: end; justify-content: space-between; }
+  .top h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(28px, 3.6vw, 40px); margin: 0; line-height: 1.1; }
+  .top p { margin: 6px 0 0; color: var(--page-muted); max-width: 64ch; }
+  .tagline { font-family: var(--read); font-size: 19px; color: var(--candle); margin: 0; }
+
+  .section-head { display: flex; flex-wrap: wrap; gap: 6px 28px; align-items: baseline; margin: 34px 0 22px; }
+  .section-head h2 { font-family: var(--serif); font-weight: 500; font-size: 26px; margin: 0; }
+  .section-head p { margin: 0; color: var(--page-muted); max-width: 72ch; }
+
+  /* ---------- phones ---------- */
+  .phones { display: flex; gap: 28px; overflow-x: auto; padding: 6px 4px 18px; scroll-snap-type: x mandatory; }
+  .phone-wrap { flex: 0 0 auto; margin: 0; scroll-snap-align: start; }
+  .phone-wrap figcaption { color: var(--page-muted); font-size: 13.5px; margin: 12px 4px 0; max-width: 300px; }
+  .phone { width: 300px; height: 640px; border-radius: 44px; padding: 10px; background: linear-gradient(160deg, #22232B, #111217); box-shadow: 0 0 0 1px #2A2B35, 0 30px 60px -20px rgba(0,0,0,.75); }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 35px; overflow: hidden; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
+  .notch { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 92px; height: 24px; background: #000; border-radius: 20px; z-index: 2; }
+  .status { display: flex; justify-content: space-between; padding: 12px 22px 4px; font-size: 12px; }
+  .head { padding: 10px 18px 12px; }
+  .head small { color: var(--muted); font-size: 12.5px; display: block; }
+  .head h3 { margin: 2px 0 0; font-family: var(--serif); font-weight: 500; font-size: 23px; line-height: 1.15; }
+  .body { flex: 1; overflow-y: auto; padding: 0 14px 14px; scrollbar-width: none; }
+  .body::-webkit-scrollbar { display: none; }
+  .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--surface); padding: 8px 6px 16px; font-size: 11px; text-align: center; color: var(--muted); }
+  .tabbar .on { color: var(--candle); }
+  .tabbar svg { display: block; margin: 0 auto 3px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 13px 14px; margin-bottom: 10px; }
+  .card h4 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+  .card p { margin: 0; font-size: 12.8px; color: #B9B5AC; }
+  .muted { color: var(--muted); }
+
+  /* home */
+  .armed { display: flex; gap: 10px; align-items: center; background: var(--sage-soft); border: 1px solid rgba(126,156,138,.35); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.8px; }
+  .armed .ring { width: 26px; height: 26px; flex: none; }
+  .armed b { font-weight: 500; color: var(--ink); display: block; }
+  .coverage { font-family: var(--read); font-size: 15px; line-height: 1.55; color: var(--ink); margin: 2px 2px 14px; }
+  .coverage em { font-style: normal; color: var(--candle); }
+  .evening { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 11px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); margin-bottom: 8px; }
+  .evening .glyph { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--serif); font-size: 15px; border: 1px solid var(--border); }
+  .evening.done .glyph { border-color: rgba(126,156,138,.5); color: var(--sage); }
+  .evening.part .glyph { border-color: rgba(226,182,90,.5); color: var(--candle); }
+  .evening b { font-weight: 500; font-size: 14px; display: block; }
+  .evening span { font-size: 12px; color: var(--muted); }
+  .evening .go { font-size: 12px; color: var(--candle); }
+
+  /* wishes */
+  .choice-group { display: grid; gap: 8px; margin: 6px 0 12px; }
+  .choice { text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 11px 12px; cursor: pointer; display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; }
+  .choice .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--muted); margin-top: 2px; }
+  .choice[aria-pressed="true"] { border-color: rgba(226,182,90,.6); background: var(--candle-soft); }
+  .choice[aria-pressed="true"] .radio { border-color: var(--candle); box-shadow: inset 0 0 0 3.5px var(--bg); background: var(--candle); }
+  .choice b { font-weight: 500; font-size: 13.8px; display: block; }
+  .choice span { font-size: 12px; color: var(--muted); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); margin: 0 2px 5px; }
+  .field .input { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 13.8px; }
+  .field .input.area { font-family: var(--read); font-size: 14px; line-height: 1.5; min-height: 74px; }
+  .prompt { border: 1px dashed rgba(226,182,90,.45); border-radius: 14px; padding: 11px 12px; font-size: 12.8px; margin-bottom: 10px; background: rgba(226,182,90,.04); }
+  .prompt b { color: var(--candle); font-weight: 500; display: block; margin-bottom: 2px; }
+  .prompt .opts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .pill-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 4px 11px; font-size: 12px; cursor: pointer; }
+  .pill-btn[aria-pressed="true"] { border-color: var(--candle); color: var(--candle); }
+
+  /* letter */
+  .paper { background: #F3EEE3; color: #2A2620; border-radius: 16px; padding: 16px 16px 14px; margin-bottom: 10px; box-shadow: 0 10px 30px -14px rgba(0,0,0,.8); }
+  .paper .to { font-family: var(--sans); font-size: 11.5px; color: #7C7468; margin-bottom: 8px; }
+  .paper .letter { font-family: var(--read); font-size: 14.2px; line-height: 1.65; }
+  .paper .letter p { margin: 0 0 10px; }
+  .caret { display: inline-block; width: 1.5px; height: 1.05em; background: #2A2620; vertical-align: -2px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 6px 0 8px; }
+  .seg button { border: 0; background: transparent; padding: 8px 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--raise); color: var(--ink); }
+  .seg-note { font-size: 12px; color: #B9B5AC; margin: 0 2px 12px; min-height: 52px; }
+  .when { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .itan { display: flex; gap: 10px; align-items: flex-start; border-top: 1px solid var(--border); padding-top: 10px; font-size: 12.3px; color: var(--muted); }
+  .itan .flame { flex: none; margin-top: 1px; }
+
+  /* people + protocol */
+  .keyviz { display: block; width: 100%; margin: 2px 0 6px; }
+  .person { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 9px 2px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .person:last-child { border-bottom: 0; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 500; font-size: 13px; background: var(--raise); border: 1px solid var(--border); }
+  .person small { display: block; color: var(--muted); font-size: 11.5px; }
+  .tag { font-size: 11px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .tag.ok { border-color: rgba(126,156,138,.5); color: var(--sage); }
+  .tag.wait { border-color: rgba(226,182,90,.45); color: var(--candle); }
+  .rule { display: flex; justify-content: space-between; gap: 10px; font-size: 12.8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .rule:last-child { border-bottom: 0; }
+  .rule b { font-weight: 500; text-align: right; }
+
+  /* ---------- executor workspace ---------- */
+  .desk { border-radius: 16px; overflow: hidden; border: 1px solid #1F2029; background: var(--bg); box-shadow: 0 40px 80px -30px rgba(0,0,0,.8); }
+  .chrome { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #121318; border-bottom: 1px solid #1F2029; }
+  .lights { display: flex; gap: 6px; }
+  .lights i { width: 11px; height: 11px; border-radius: 50%; background: #2B2C35; }
+  .url { flex: 1; max-width: 420px; margin: 0 auto; background: #0B0C10; border: 1px solid #1F2029; border-radius: 8px; padding: 5px 12px; font-size: 12.5px; color: var(--muted); text-align: center; }
+  .desk-in { padding: 24px 26px 28px; }
+
+  .protocol { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 4px 0 18px; position: relative; }
+  .stage { position: relative; padding: 0 12px 0 0; }
+  .stage .bar { height: 4px; border-radius: 4px; background: var(--border); margin-bottom: 10px; }
+  .stage.done .bar { background: var(--sage); }
+  .stage.now .bar { background: linear-gradient(90deg, var(--alert) 0 50%, var(--border) 50%); }
+  .stage b { display: block; font-weight: 500; font-size: 14px; }
+  .stage span { font-size: 12.5px; color: var(--muted); }
+  .stage.now b { color: var(--alert); }
+
+  .sim { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 12px 14px; margin-bottom: 20px; }
+  .sim p { margin: 0; font-size: 13.5px; max-width: 70ch; }
+  .sim .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { border: 0; border-radius: 10px; padding: 9px 14px; background: var(--candle); color: #2A1E05; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+  .btn-line { border: 1px solid var(--border); border-radius: 10px; padding: 8px 13px; background: transparent; color: var(--ink); font-size: 13.5px; cursor: pointer; }
+  .btn-line.danger { border-color: rgba(217,115,91,.5); color: var(--alert); }
+
+  .workspace { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 18px; }
+  .tier { position: relative; }
+  .tier > .veil {
+    position: absolute; inset: 0; border-radius: 14px; background: rgba(14,15,20,.88); backdrop-filter: blur(5px);
+    display: grid; place-items: center; text-align: center; padding: 18px; z-index: 2;
+  }
+  .tier > .veil b { display: block; font-family: var(--serif); font-weight: 500; font-size: 18px; }
+  .tier > .veil span { display: block; color: var(--muted); font-size: 12.8px; margin-top: 4px; max-width: 40ch; }
+  .tier.open > .veil { display: none; }
+  .tier-label { font-size: 11.5px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .tier-label i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .locked { position: relative; }
+  .locked .veil {
+    position: absolute; inset: 0; border-radius: 14px; background: rgba(14,15,20,.86); backdrop-filter: blur(5px);
+    display: grid; place-items: center; text-align: center; padding: 20px; z-index: 2;
+  }
+  .locked .veil p { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; max-width: 46ch; }
+  .locked .veil h4 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 21px; }
+  .unlocked .veil { display: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; }
+  .panel h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .panel .sub { color: var(--muted); font-size: 12.8px; margin: 2px 0 12px; }
+  .draft-banner { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--candle); border: 1px solid rgba(226,182,90,.35); background: rgba(226,182,90,.06); border-radius: 10px; padding: 7px 10px; margin-bottom: 12px; }
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .steps li:last-child { border-bottom: 0; }
+  .steps li::before { content: counter(s); width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .steps li.checked::before { content: "✓"; border-color: rgba(126,156,138,.6); color: var(--sage); font-family: var(--sans); }
+  .steps b { font-weight: 500; font-size: 14px; display: block; }
+  .steps span { font-size: 12.5px; color: var(--muted); }
+  .docs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .doc { font-size: 11.5px; border: 1px solid var(--border); border-radius: 8px; padding: 2px 8px; color: #C9C4BA; background: var(--raise); }
+  .who { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .call { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .call:last-child { border-bottom: 0; }
+  .call .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .call small { display: block; color: var(--muted); font-size: 12px; }
+  .letter-item { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .letter-item:last-child { border-bottom: 0; }
+  .letter-item small { display: block; color: var(--muted); font-size: 12px; }
+  .footnote { color: var(--page-muted); font-size: 13px; margin-top: 18px; }
+
+  @media (max-width: 960px) {
+    .workspace { grid-template-columns: 1fr; }
+    .protocol { grid-template-columns: repeat(2, 1fr); row-gap: 14px; }
+    .desk-in { padding: 18px 16px 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div>
+      <h1>Ìrántí, as it might look</h1>
+      <p>Concept screens with invented people and documents. The phones show someone preparing; the wide screen below shows what their executor sees on the day it's needed.</p>
+    </div>
+    <p class="tagline">Leave your family clarity, not chaos.</p>
+  </header>
+
+  <div class="section-head">
+    <h2>Preparing</h2>
+    <p>Four quiet evenings: who, what, wishes and words. Try the choices on the second screen and the two letter settings on the third.</p>
+  </div>
+
+  <div class="phones">
+    <!-- 1. Home -->
+    <figure class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>21:14</span><span>●●● 5G</span></div>
+        <div class="head"><small>Ade Bello</small><h3>Your Ìrántí</h3></div>
+        <div class="body">
+          <div class="armed">
+            <svg class="ring" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="#7E9C8A" stroke-width="2"/><path d="M16 9c2.4 3 3.6 5 3.6 7.1a3.6 3.6 0 0 1-7.2 0C12.4 14 13.6 12 16 9z" fill="#E2B65A"/></svg>
+            <div><b>Locked and ready</b>Two trusted people hold keys. Nothing is shared while you're here.</div>
+          </div>
+          <p class="coverage">If something happened tomorrow, your family would know <em>who to call</em>, <em>where your accounts are</em> and <em>what you want for your body</em>. Your digital life isn't covered yet, and two letters are still drafts.</p>
+          <div class="evening done"><span class="glyph">1</span><div><b>Who</b><span>9 people, call order set</span></div><span class="go">Review</span></div>
+          <div class="evening done"><span class="glyph">2</span><div><b>What</b><span>4 accounts, 2 policies, will location</span></div><span class="go">Review</span></div>
+          <div class="evening part"><span class="glyph">3</span><div><b>Wishes</b><span>Body and rites done; digital life to do</span></div><span class="go">Continue</span></div>
+          <div class="evening part"><span class="glyph">4</span><div><b>Words</b><span>1 letter armed, 2 drafts</span></div><span class="go">Continue</span></div>
+          <div class="card" style="margin-top:12px">
+            <h4>Your yearly look-back is in March</h4>
+            <p>New child, new home, new bank? A ten-minute review keeps this true.</p>
+          </div>
+        </div>
+        <div class="tabbar">
+          <span class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Home</span>
+          <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Vault</span>
+          <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>Letters</span>
+          <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 19c1-3 3.5-4.5 6-4.5s5 1.5 6 4.5M15 15.5c2.5 0 4.5 1.2 5.5 3.5"/></svg>People</span>
+        </div>
+      </div></div>
+      <figcaption>Home. Coverage is described in plain words, never as a percentage or a score.</figcaption>
+    </figure>
+
+    <!-- 2. Wishes -->
+    <figure class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>21:20</span><span>●●● 5G</span></div>
+        <div class="head"><small>Evening 3, wishes</small><h3>Where would you like to be laid to rest?</h3></div>
+        <div class="body">
+          <div class="choice-group" role="group" aria-label="Resting place">
+            <button class="choice" type="button" aria-pressed="false" data-c="uae"><span class="radio"></span><div><b>Here in the UAE</b><span>Burial or cremation locally</span></div></button>
+            <button class="choice" type="button" aria-pressed="true" data-c="home"><span class="radio"></span><div><b>Taken home</b><span>Repatriated to another country</span></div></button>
+            <button class="choice" type="button" aria-pressed="false" data-c="family"><span class="radio"></span><div><b>Let my family decide</b><span>They'll know what's right</span></div></button>
+          </div>
+          <div class="field" id="homeField"><label>Taken home to</label><div class="input">Ibadan, Oyo State, Nigeria</div></div>
+          <div class="prompt" id="repatPrompt">
+            <b>Worth knowing now</b>
+            Repatriation from the UAE needs a chain of papers, and some consulates only let a blood relative or someone with power of attorney sign them. Does your employer's insurance cover repatriation?
+            <div class="opts" role="group" aria-label="Insurance cover">
+              <button class="pill-btn" type="button" aria-pressed="true">Yes</button>
+              <button class="pill-btn" type="button" aria-pressed="false">No</button>
+              <button class="pill-btn" type="button" aria-pressed="false">I'll check</button>
+            </div>
+          </div>
+          <div class="field"><label>Faith and rites, in your own words</label>
+            <div class="input area">A service at my home church before the flight. Psalm 23 read by my brother. Keep it simple; no one should borrow money for this.</div>
+          </div>
+          <div class="field"><label>Who should lead it</label><div class="input">Pastor at RAK fellowship, then family in Ibadan</div></div>
+        </div>
+      </div></div>
+      <figcaption>Wishes. Your choices raise the questions your family would otherwise face alone, from a playbook for the country you live in.</figcaption>
+    </figure>
+
+    <!-- 3. Letter -->
+    <figure class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>21:41</span><span>●●● 5G</span></div>
+        <div class="head"><small>Evening 4, words</small><h3>A letter for Tobi</h3></div>
+        <div class="body">
+          <div class="paper">
+            <div class="to">To Tobi, on your eighteenth birthday</div>
+            <div class="letter">
+              <p>My son,</p>
+              <p>If you're reading this, you've reached the age I kept picturing when you were small enough to sleep on my chest.</p>
+              <p>I want you to know three things<span class="caret"></span></p>
+            </div>
+          </div>
+          <div class="when" role="group" aria-label="When it arrives">
+            <button class="pill-btn" type="button" aria-pressed="false" data-w="release">When I die</button>
+            <button class="pill-btn" type="button" aria-pressed="true" data-w="date">On a date</button>
+            <button class="pill-btn" type="button" aria-pressed="false" data-w="milestone">On a milestone</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin:2px 2px 0">Who can open it</div>
+          <div class="seg" role="group" aria-label="Who can open it">
+            <button type="button" aria-pressed="false" data-k="key">Tobi's key</button>
+            <button type="button" aria-pressed="true" data-k="card">Letter card</button>
+            <button type="button" aria-pressed="false" data-k="handover">Hand-over</button>
+          </div>
+          <p class="seg-note" id="segNote"></p>
+          <div class="itan">
+            <svg class="flame" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3.5 4.5 5.5 7.5 5.5 10.5a5.5 5.5 0 0 1-11 0C6.5 10.5 8.5 7.5 12 3z" fill="#E2B65A"/></svg>
+            <span>Stuck for words? Ask Ìtàn for a gentle question to start you off. Ìtàn sees only what you share in that conversation.</span>
+          </div>
+        </div>
+      </div></div>
+      <figcaption>Letters. Each one is locked to the person it's for. Tobi is a child, so a printed letter card holds his key until the day comes.</figcaption>
+    </figure>
+
+    <!-- 4. People + protocol -->
+    <figure class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>21:52</span><span>●●● 5G</span></div>
+        <div class="head"><small>Evening 1, who</small><h3>Who can open it, and how</h3></div>
+        <div class="body">
+          <svg class="keyviz" viewBox="0 0 270 156" aria-label="Your vault key split into four parts; any two including Ìrántí's can open it">
+            <circle cx="135" cy="44" r="26" fill="#1C1F28" stroke="#E2B65A" stroke-width="1.5"/>
+            <path d="M135 30c4 5 6 8.5 6 11.8a6 6 0 0 1-12 0c0-3.3 2-6.8 6-11.8z" fill="#E2B65A"/>
+            <text x="135" y="150" text-anchor="middle" font-size="10.5" fill="#8C8A85" font-family="IBM Plex Sans, system-ui, sans-serif">Your key, split four ways</text>
+            <g stroke="#262833" stroke-width="1.5"><path d="M118 62 L38 108"/><path d="M128 68 L104 108"/><path d="M142 68 L166 108"/><path d="M152 62 L232 108"/></g>
+            <g font-family="IBM Plex Sans, system-ui, sans-serif" font-size="10.5" text-anchor="middle">
+              <circle cx="38" cy="118" r="12" fill="#16181F" stroke="#7E9C8A"/><text x="38" y="122" fill="#ECE7DD">F</text>
+              <circle cx="104" cy="118" r="12" fill="#16181F" stroke="#7E9C8A"/><text x="104" y="122" fill="#ECE7DD">K</text>
+              <circle cx="166" cy="118" r="12" fill="#16181F" stroke="#E2B65A" stroke-dasharray="3 2"/><text x="166" y="122" fill="#ECE7DD">D</text>
+              <rect x="220" y="106" width="24" height="24" rx="6" fill="#16181F" stroke="#ECE7DD" stroke-opacity=".5"/><text x="232" y="122" fill="#ECE7DD">Ì</text>
+            </g>
+          </svg>
+          <div class="card" style="padding:4px 12px">
+            <div class="person"><span class="avatar">F</span><div>Funmi Bello<small>Sister, executor</small></div><span class="tag ok">Holds a key</span></div>
+            <div class="person"><span class="avatar">K</span><div>Kayode Ajayi<small>Friend, confirms</small></div><span class="tag ok">Holds a key</span></div>
+            <div class="person"><span class="avatar">D</span><div>David Mensah<small>Colleague, paper key</small></div><span class="tag wait">Printing</span></div>
+          </div>
+          <div class="card">
+            <div class="rule"><span>To open</span><b>Ìrántí + one executor</b></div>
+            <div class="rule"><span>Urgent details</span><b>After 48 hours</b></div>
+            <div class="rule"><span>Everything else</span><b>14 days, or 3 if two confirm</b></div>
+            <div class="rule"><span>Check-in</span><b>Every 90 days</b></div>
+          </div>
+          <p class="muted" style="font-size:12px;margin:2px 4px 0">Neither Ìrántí nor any one person can open your vault alone. You're contacted every day while a claim is open, and opening the app stops it.</p>
+        </div>
+      </div></div>
+      <figcaption>People and protocol. Your key is split between trusted people and Ìrántí, so opening it always takes more than one.</figcaption>
+    </figure>
+  </div>
+
+  <div class="section-head">
+    <h2>When it's needed</h2>
+    <p>The executor's workspace. Step through a release to see how the protocol protects the owner first, opens the urgent details within days, then the rest.</p>
+  </div>
+
+  <div class="desk">
+    <div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url">iranti.cotek.app/executor/ade-bello</div></div>
+    <div class="desk-in">
+      <div style="color:var(--muted);font-size:13px">Funmi Bello, executor for</div>
+      <h2 style="font-family:var(--serif);font-weight:500;font-size:30px;margin:2px 0 16px">Ade Bello</h2>
+
+      <div class="protocol" id="protocol">
+        <div class="stage" data-s="0"><div class="bar"></div><b>Claim opened</b><span>Ade and every trusted person told at once</span></div>
+        <div class="stage" data-s="1"><div class="bar"></div><b>Confirmed</b><span>Kayode confirms; Ade still contacted daily</span></div>
+        <div class="stage" data-s="2"><div class="bar"></div><b>Urgent details open</b><span>After 48 hours</span></div>
+        <div class="stage" data-s="3"><div class="bar"></div><b>Fast-track met</b><span>Two confirmations and a death certificate</span></div>
+        <div class="stage" data-s="4"><div class="bar"></div><b>Everything opens</b><span>Day 3, on Funmi's device</span></div>
+      </div>
+
+      <div class="sim">
+        <p id="simText"></p>
+        <div class="btns">
+          <button class="btn-line danger" type="button" id="cancelBtn">Ade opens the app</button>
+          <button class="btn" type="button" id="nextBtn">Next step</button>
+        </div>
+      </div>
+
+      <div class="workspace" id="workspace">
+        <div>
+          <div class="panel tier" data-tier="urgent">
+            <div class="veil"><div><b>Opens in the first days</b><span>Who to call and what Ade wanted, once a trusted person confirms and 48 hours have passed.</span></div></div>
+            <div class="tier-label"><i style="background:var(--candle)"></i>Urgent details</div>
+            <h3>The first 72 hours</h3>
+            <div class="sub">Built from Ade's wishes and the UAE playbook. Tick steps off as they're done, or hand them to someone.</div>
+            <div class="draft-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              UAE playbook: draft, under legal review
+            </div>
+            <ol class="steps" id="steps">
+              <li class="checked"><div><b>Get the death notification and police report</b><span>From the hospital; the police station issues a report where needed.</span></div><span class="who">Funmi</span></li>
+              <li><div><b>Get the official death certificate</b><span>Arabic, with an English copy for repatriation and insurance. Ask for authenticated copies.</span></div><span class="who">Funmi</span></li>
+              <li><div><b>Contact the Nigerian consulate in Dubai</b><span>Ade wants to be taken home to Ibadan. Ask for the no-objection letter. His power of attorney is with his lawyer.</span></div><span class="who">Kayode</span></li>
+              <li><div><b>Call his employer's HR</b><span>His policy covers repatriation. HR may arrange embalming and cargo.</span></div><span class="who">Kayode</span></li>
+              <li><div><b>Arrange the church service before the flight</b><span>Psalm 23, read by his brother. "Keep it simple."</span></div><span class="who">Funmi</span></li>
+            </ol>
+          </div>
+          <div class="panel tier" data-tier="full">
+            <div class="veil"><div><b>Opens with everything else</b><span>Accounts, documents and private notes open on the fast-track or after 14 days.</span></div></div>
+            <div class="tier-label"><i style="background:var(--sage)"></i>Everything else</div>
+            <h3>Accounts and documents</h3>
+            <div class="sub">What the banks and courts will ask for.</div>
+            <div class="letter-item"><div>Registered will<small>DIFC registry, with the lawyer's details</small></div><button class="btn-line" type="button">Open</button></div>
+            <div class="letter-item"><div>Current and savings accounts<small>Two in the UAE, one in Nigeria</small></div><button class="btn-line" type="button">Open</button></div>
+            <div class="letter-item"><div>Group life and repatriation policy<small>Claim contact and policy document</small></div><button class="btn-line" type="button">Open</button></div>
+            <div class="letter-item"><div>Land title, Ibadan<small>Scanned deed and where the original is kept</small></div><button class="btn-line" type="button">Open</button></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel tier" data-tier="urgent">
+            <div class="veil"><div><b>Opens in the first days</b><span>Ade's own call list.</span></div></div>
+            <div class="tier-label"><i style="background:var(--candle)"></i>Urgent details</div>
+            <h3>Who to call, in Ade's order</h3>
+            <div class="sub">He wrote this list himself.</div>
+            <div class="call"><span class="n">1</span><div>Mama, in Ibadan<small>Tell her in person if anyone can; call Uncle Femi first</small></div><button class="btn-line" type="button">Call</button></div>
+            <div class="call"><span class="n">2</span><div>Pastor, RAK fellowship<small>Church service and pastoral care</small></div><button class="btn-line" type="button">Call</button></div>
+            <div class="call"><span class="n">3</span><div>Employer HR<small>Repatriation cover, final salary, gratuity</small></div><button class="btn-line" type="button">Call</button></div>
+            <div class="call"><span class="n">4</span><div>Lawyer<small>Holds the original will</small></div><button class="btn-line" type="button">Call</button></div>
+          </div>
+          <div class="panel tier" data-tier="full">
+            <div class="veil"><div><b>Opens with everything else</b><span>Letters reach their people the way Ade arranged.</span></div></div>
+            <div class="tier-label"><i style="background:var(--sage)"></i>Everything else</div>
+            <h3>Letters</h3>
+            <div class="sub">Each is locked to the person it's for.</div>
+            <div class="letter-item"><div>For Funmi<small>Locked to her key; opens now</small></div><button class="btn" type="button">Open</button></div>
+            <div class="letter-item"><div>For Mama<small>Funmi hands it over</small></div><span class="tag">Hand-over</span></div>
+            <div class="letter-item"><div>For Tobi<small>His 18th birthday, 2034; opens with his letter card</small></div><span class="tag ok">Letter card</span></div>
+            <div class="letter-item"><div>For Tobi, on his wedding day<small>Waits until someone confirms the day</small></div><span class="tag wait">Milestone</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="footnote">Concept only. All people, places, documents and wording are invented. Ìrántí is not a will and not legal advice; the playbook shown would be reviewed by a qualified lawyer before launch. Nobody at COTEK can read anything in a vault.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* wishes: resting place choice */
+  const choices = document.querySelectorAll(".choice");
+  const homeField = document.getElementById("homeField");
+  const repat = document.getElementById("repatPrompt");
+  choices.forEach((c) => c.addEventListener("click", () => {
+    choices.forEach((o) => o.setAttribute("aria-pressed", String(o === c)));
+    const home = c.dataset.c === "home";
+    homeField.style.display = home ? "" : "none";
+    repat.style.display = home ? "" : "none";
+  }));
+  document.querySelectorAll("#repatPrompt .pill-btn").forEach((b, _, all) => b.addEventListener("click", () => {
+    all.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  }));
+
+  /* letter: when + how kept */
+  const notes = {
+    key: "Locked to Tobi's own Ìrántí key. It delivers itself on the day and only he can open it. Not even Ìrántí can read it.",
+    card: "Locked to a printed letter card kept with your will. On the day, whoever holds the card scans it to open the letter. Only the card can unlock it.",
+    handover: "Funmi prepares it for Tobi after you're gone. Simple, but it means Funmi could open it."
+  };
+  const segNote = document.getElementById("segNote");
+  const segBtns = document.querySelectorAll(".seg button");
+  function setKeep(k) {
+    segBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+    segNote.textContent = notes[k];
+  }
+  segBtns.forEach((b) => b.addEventListener("click", () => setKeep(b.dataset.k)));
+  const whenBtns = document.querySelectorAll(".when .pill-btn");
+  whenBtns.forEach((b) => b.addEventListener("click", () => {
+    whenBtns.forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  }));
+  setKeep("card");
+
+  /* executor: release simulation */
+  const stages = document.querySelectorAll(".stage");
+  const simText = document.getElementById("simText");
+  const nextBtn = document.getElementById("nextBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+  const tiers = document.querySelectorAll(".tier");
+  const text = [
+    "Funmi opened a claim and uploaded the death certificate. Ade and every trusted person are told straight away on email, WhatsApp and push.",
+    "Kayode confirmed in his own app. Ade is still contacted every day; if he opens the app, everything stops.",
+    "48 hours, no word from Ade. The urgent details open on Funmi's device: who to call and what he wanted. Accounts and letters stay locked.",
+    "Kayode and Funmi have both confirmed and the certificate is in, so the fast-track applies: everything else can open after 72 hours instead of 14 days.",
+    "Day 3. Ìrántí's piece joins Funmi's on her own device and the rest of the vault opens there. Ìrántí never sees what's inside."
+  ];
+  const last = text.length - 1;
+  let step = 0, cancelled = false, cancelledAt = 0;
+  function setTiers(urgent, full) {
+    tiers.forEach((t) => t.classList.toggle("open", t.dataset.tier === "urgent" ? urgent : full));
+  }
+  function render() {
+    stages.forEach((s, i) => {
+      s.classList.toggle("done", !cancelled && (i < step || (i === step && step === last)));
+      s.classList.toggle("now", !cancelled && i === step && step < last);
+    });
+    if (cancelled) {
+      simText.textContent = cancelledAt >= 2
+        ? "Ade opened the app. The rest of the vault stays locked. He's told exactly what the urgent details showed and to whom, and can change his urgent key in one tap."
+        : "Ade opened the app. Everything stopped, nothing was opened, and Funmi and Kayode were told he's safe.";
+      setTiers(false, false);
+      nextBtn.textContent = "Start again"; cancelBtn.disabled = true; cancelBtn.style.opacity = .4;
+      return;
+    }
+    simText.textContent = text[step];
+    setTiers(step >= 2, step === last);
+    nextBtn.textContent = step === last ? "Start again" : "Next step";
+    const canCancel = step < last;
+    cancelBtn.disabled = !canCancel; cancelBtn.style.opacity = canCancel ? 1 : .4;
+  }
+  nextBtn.addEventListener("click", () => {
+    if (cancelled || step === last) { step = 0; cancelled = false; }
+    else step++;
+    render();
+  });
+  cancelBtn.addEventListener("click", () => { if (step < last) { cancelled = true; cancelledAt = step; render(); } });
+  render();
+
+  /* executor: tick steps */
+  document.querySelectorAll("#steps li").forEach((li) => {
+    li.style.cursor = "pointer";
+    li.tabIndex = 0;
+    const toggle = () => li.classList.toggle("checked");
+    li.addEventListener("click", toggle);
+    li.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+  });
+})();
+</script>
+</body>
+</html>
